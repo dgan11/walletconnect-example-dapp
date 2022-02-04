@@ -380,7 +380,7 @@ class App extends React.Component<any, any> {
         txHash: result,
         from: address,
         to: address,
-        value: "0 ETH",
+        value: `${_value} ETH`,
       };
 
       // display result
@@ -395,15 +395,144 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public testSignMessage = async () => {
-    console.log('\n\n ********* testSignMessage in App.tsx ran..... *********')
-    // const { connector, address, chainId } = this.state;
-    const { connector, address } = this.state;
-    console.log('hardcoded chainId === 4 (rinkeby)')
-    const chainId = 4;
-    console.log('exampleDapp Ap.tsx testSignMessage() - connector: ', connector);
-    console.log('exampleDapp Ap.tsx testSignMessage() - address: ', address);
-    console.log('exampleDapp Ap.tsx testSignMessage() - chainId: ', chainId)
+
+  // public testSignMessage = async () => {
+  //   console.log('\n\n ********* testSignMessage in App.tsx ran..... *********')
+  //   // const { connector, address, chainId } = this.state;
+  //   const { connector, address } = this.state;
+  //   console.log('hardcoded chainId === 4 (rinkeby)')
+  //   const chainId = 4;
+  //   console.log('exampleDapp Ap.tsx testSignMessage() - connector: ', connector);
+  //   console.log('exampleDapp Ap.tsx testSignMessage() - address: ', address);
+  //   console.log('exampleDapp Ap.tsx testSignMessage() - chainId: ', chainId)
+
+    
+  public testSignTransaction = async () => {
+    const { connector, address, chainId } = this.state;
+
+    if (!connector) {
+      return;
+    }
+
+    // from
+    const from = address;
+
+    // to
+    const to = address;
+
+    // nonce
+    const _nonce = await apiGetAccountNonce(address, chainId);
+    const nonce = sanitizeHex(convertStringToHex(_nonce));
+
+    // gasPrice
+    const gasPrices = await apiGetGasPrices();
+    const _gasPrice = gasPrices.slow.price;
+    const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
+
+    // gasLimit
+    const _gasLimit = 21000;
+    const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
+
+    // value
+    const _value = 0;
+    const value = sanitizeHex(convertStringToHex(_value));
+
+    // data
+    const data = "0x";
+
+    // test transaction
+    const tx = {
+      from,
+      to,
+      nonce,
+      gasPrice,
+      gasLimit,
+      value,
+      data,
+    };
+
+    try {
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // send transaction
+      const result = await connector.signTransaction(tx);
+
+      // format displayed result
+      const formattedResult = {
+        method: "eth_signTransaction",
+        from: address,
+        to: address,
+        value: `${_value} ETH`,
+        result,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
+
+  public testLegacySignMessage = async () => {
+    const { connector, address, chainId } = this.state;
+
+    if (!connector) {
+      return;
+    }
+
+    // test message
+    const message = `My email is john@doe.com - ${new Date().toUTCString()}`;
+
+    // hash message
+    const hash = hashMessage(message);
+
+    // eth_sign params
+    const msgParams = [address, hash];
+
+    try {
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // send message
+      const result = await connector.signMessage(msgParams);
+
+      // verify signature
+      const valid = await verifySignature(address, result, hash, chainId);
+
+      // format displayed result
+      const formattedResult = {
+        method: "eth_sign (legacy)",
+        address,
+        valid,
+        result,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
+
+  public testStandardSignMessage = async () => {
+    const { connector, address, chainId } = this.state;
 
     if (!connector) {
       return;
@@ -435,7 +564,57 @@ class App extends React.Component<any, any> {
 
       // format displayed result
       const formattedResult = {
-        method: "eth_sign",
+        method: "eth_sign (standard)",
+        address,
+        valid,
+        result,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
+
+  public testPersonalSignMessage = async () => {
+    const { connector, address, chainId } = this.state;
+
+    if (!connector) {
+      return;
+    }
+
+    // test message
+    const message = `My email is john@doe.com - ${new Date().toUTCString()}`;
+
+    // encode message (hex)
+    const hexMsg = convertUtf8ToHex(message);
+
+    // eth_sign params
+    const msgParams = [hexMsg, address];
+
+    try {
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // send message
+      const result = await connector.signPersonalMessage(msgParams);
+
+      // verify signature
+      const hash = hashMessage(message);
+      const valid = await verifySignature(address, result, hash, chainId);
+
+      // format displayed result
+      const formattedResult = {
+        method: "personal_sign",
         address,
         valid,
         result,
@@ -542,13 +721,20 @@ class App extends React.Component<any, any> {
                     <STestButton left onClick={this.testSendTransaction}>
                       {"eth_sendTransaction"}
                     </STestButton>
-
-                    <STestButton left onClick={this.testSignMessage}>
-                      {"eth_sign"}
+                    <STestButton left onClick={this.testSignTransaction}>
+                      {"eth_signTransaction"}
                     </STestButton>
-
                     <STestButton left onClick={this.testSignTypedData}>
                       {"eth_signTypedData"}
+                    </STestButton>
+                    <STestButton left onClick={this.testLegacySignMessage}>
+                      {"eth_sign (legacy)"}
+                    </STestButton>
+                    <STestButton left onClick={this.testStandardSignMessage}>
+                      {"eth_sign (standard)"}
+                    </STestButton>
+                    <STestButton left onClick={this.testPersonalSignMessage}>
+                      {"personal_sign"}
                     </STestButton>
                   </STestButtonContainer>
                 </Column>
