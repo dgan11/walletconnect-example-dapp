@@ -145,7 +145,7 @@ const INITIAL_STATE: IAppState = {
   connector: null,
   fetching: false,
   connected: false,
-  chainId: 1,
+  chainId: 4, // was 1 for mainet change to 4 for rinkeby
   showModal: false,
   pendingRequest: false,
   uri: "",
@@ -155,30 +155,48 @@ const INITIAL_STATE: IAppState = {
   assets: [],
 };
 
+function timeout(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 class App extends React.Component<any, any> {
   public state: IAppState = {
     ...INITIAL_STATE,
   };
 
   public connect = async () => {
+    console.log('\n\n App.tsx ********* connect() function ran..... *********')
     // bridge url
     const bridge = "https://bridge.walletconnect.org";
 
     // create new connector
+    console.log('App.tsx - connector state at beginning: ', this.state.connector)
     const connector = new WalletConnect({ bridge, qrcodeModal: QRCodeModal });
+    console.log('App.tsx - QRCodeModal: ', QRCodeModal)
+
 
     await this.setState({ connector });
+    console.log('App.tsx - created a connector and updated this.state.connector: ', this.state.connector)
+    console.log('App.tsx - is the connector connected? : ', connector.connected)
+    console.log('++++++++++++++++++++ TIMEOUT BEFORE CREATING SESSION+++++++++++++++++++')
+    await timeout(3000);
 
     // check if already connected
     if (!connector.connected) {
+      console.log('App.tsx - connector not connected so creating a new session...')
       // create new session
       await connector.createSession();
+      console.log('++++++++++++++++++++ SESSION DONE CREATING +++++++++++++++++++')
+      // await timeout(3000);
     }
 
     // subscribe to events
+    console.log('App.tsx - subscribing to events')
+    console.log(' App.tsx - connector after creating a new session: ', connector.connected)
     await this.subscribeToEvents();
   };
   public subscribeToEvents = () => {
+    console.log('App.tsx ******* subscribeToEvents() called *********')
     const { connector } = this.state;
 
     if (!connector) {
@@ -186,7 +204,8 @@ class App extends React.Component<any, any> {
     }
 
     connector.on("session_update", async (error, payload) => {
-      console.log(`connector.on("session_update")`);
+      console.log(`App.tsx onnector.on("session_update")`);
+      console.log('App.tsx - payload: ', payload)
 
       if (error) {
         throw error;
@@ -197,7 +216,7 @@ class App extends React.Component<any, any> {
     });
 
     connector.on("connect", (error, payload) => {
-      console.log(`connector.on("connect")`);
+      console.log(`App.tsx - connector.on("connect") & payload: `, payload);
 
       if (error) {
         throw error;
@@ -207,7 +226,7 @@ class App extends React.Component<any, any> {
     });
 
     connector.on("disconnect", (error, payload) => {
-      console.log(`connector.on("disconnect")`);
+      console.log(`App.tsx - connector.on("disconnect")`);
 
       if (error) {
         throw error;
@@ -217,6 +236,7 @@ class App extends React.Component<any, any> {
     });
 
     if (connector.connected) {
+      console.log('App.tsx - connector.connected')
       const { chainId, accounts } = connector;
       const address = accounts[0];
       this.setState({
@@ -229,6 +249,8 @@ class App extends React.Component<any, any> {
     }
 
     this.setState({ connector });
+    console.log('App.tsx - end of subscribeToEvents()')
+    console.log('App.tsx - state at end of subscribeToEvents(): ', this.state)
   };
 
   public killSession = async () => {
@@ -244,6 +266,7 @@ class App extends React.Component<any, any> {
   };
 
   public onConnect = async (payload: IInternalEvent) => {
+    console.log('\n\n App.tsx ********* onConnect in App.tsx ran..... *********')
     const { chainId, accounts } = payload.params[0];
     const address = accounts[0];
     await this.setState({
@@ -252,6 +275,7 @@ class App extends React.Component<any, any> {
       accounts,
       address,
     });
+    console.log('App.tsx - onConnect() state here: ', this.state)
     this.getAccountAssets();
   };
 
@@ -260,17 +284,20 @@ class App extends React.Component<any, any> {
   };
 
   public onSessionUpdate = async (accounts: string[], chainId: number) => {
+    console.log('\n\n ********* onSessionUpdate in App.tsx ran..... *********')
     const address = accounts[0];
     await this.setState({ chainId, accounts, address });
     await this.getAccountAssets();
   };
 
   public getAccountAssets = async () => {
+    console.log('\n\n ********* getAccountsAssets in App.tsx ran..... *********')
     const { address, chainId } = this.state;
     this.setState({ fetching: true });
     try {
       // get account balances
       const assets = await apiGetAccountAssets(address, chainId);
+      console.log('App.tsx - getAccountAssets() assets: ', assets)
 
       await this.setState({ fetching: false, address, assets });
     } catch (error) {
@@ -282,7 +309,11 @@ class App extends React.Component<any, any> {
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
   public testSendTransaction = async () => {
-    const { connector, address, chainId } = this.state;
+    console.log('\n\n ********* testSendTransaction in App.tsx ran..... *********')
+    // const { connector, address, chainId } = this.state;
+    const { connector, address } = this.state;
+    console.log('hardcoded chainId === 4 (rinkeby)')
+    const chainId = 4;
 
     if (!connector) {
       return;
@@ -295,12 +326,19 @@ class App extends React.Component<any, any> {
     const to = address;
 
     // nonce
-    const _nonce = await apiGetAccountNonce(address, chainId);
-    const nonce = sanitizeHex(convertStringToHex(_nonce));
+    // @ts-ignore
+    const _nonce = await apiGetAccountNonce(address, chainId); // have to update this code
+    console.log('_nonce: ', _nonce, typeof _nonce)
+    // console.log('=== have to hardcode and increment the nonce manully ==')
+    // _nonce = '189789'
+    // console.log('_nonce updated: ', _nonce, typeof _nonce)
+    // const nonce = sanitizeHex(convertStringToHex(_nonce));
+    const nonce = "0x99"
+    console.log('nonce: ', nonce, typeof nonce);
 
     // gasPrice
     const gasPrices = await apiGetGasPrices();
-    const _gasPrice = gasPrices.slow.price;
+    const _gasPrice = gasPrices.fast.price;
     const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
 
     // gasLimit
@@ -308,11 +346,11 @@ class App extends React.Component<any, any> {
     const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
 
     // value
-    const _value = 0;
+    const _value = 0 // 10000000000000; // wei
     const value = sanitizeHex(convertStringToHex(_value));
 
     // data
-    const data = "0x";
+    const data = "0x0";
 
     // test transaction
     const tx = {
@@ -334,6 +372,7 @@ class App extends React.Component<any, any> {
 
       // send transaction
       const result = await connector.sendTransaction(tx);
+      console.log('result: ', result)
 
       // format displayed result
       const formattedResult = {
@@ -357,7 +396,14 @@ class App extends React.Component<any, any> {
   };
 
   public testSignMessage = async () => {
-    const { connector, address, chainId } = this.state;
+    console.log('\n\n ********* testSignMessage in App.tsx ran..... *********')
+    // const { connector, address, chainId } = this.state;
+    const { connector, address } = this.state;
+    console.log('hardcoded chainId === 4 (rinkeby)')
+    const chainId = 4;
+    console.log('exampleDapp Ap.tsx testSignMessage() - connector: ', connector);
+    console.log('exampleDapp Ap.tsx testSignMessage() - address: ', address);
+    console.log('exampleDapp Ap.tsx testSignMessage() - chainId: ', chainId)
 
     if (!connector) {
       return;
@@ -380,6 +426,7 @@ class App extends React.Component<any, any> {
       this.setState({ pendingRequest: true });
 
       // send message
+      console.log('msgParams: ', msgParams);
       const result = await connector.signMessage(msgParams);
 
       // verify signature

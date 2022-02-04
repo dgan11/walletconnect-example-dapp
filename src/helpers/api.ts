@@ -26,8 +26,11 @@ export async function apiGetAccountTransactions(
 }
 
 export const apiGetAccountNonce = async (address: string, chainId: number): Promise<string> => {
+  console.log('exampleDapp src/helpers/api.ts apiGetAccountNonce()')
   const response = await api.get(`/account-nonce?address=${address}&chainId=${chainId}`);
+  console.log('response: ', response)
   const { result } = response.data;
+  console.log('result: ', result)
   return result;
 };
 

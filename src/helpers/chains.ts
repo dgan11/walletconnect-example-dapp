@@ -8,7 +8,7 @@ export const SUPPORTED_CHAINS: IChainData[] = [
     network: "mainnet",
     chain_id: 1,
     network_id: 1,
-    rpc_url: "https://mainnet.infura.io/v3/%API_KEY%",
+    rpc_url: "https://mainnet.infura.io/v3/6bea709024aa4593b21ca1a28f8fcbb1",
     native_currency: {
       symbol: "ETH",
       name: "Ether",
@@ -40,7 +40,7 @@ export const SUPPORTED_CHAINS: IChainData[] = [
     network: "rinkeby",
     chain_id: 4,
     network_id: 4,
-    rpc_url: "https://rinkeby.infura.io/v3/%API_KEY%",
+    rpc_url: "https://rinkeby.infura.io/v3/6bea709024aa4593b21ca1a28f8fcbb1",
     native_currency: {
       symbol: "ETH",
       name: "Ether",

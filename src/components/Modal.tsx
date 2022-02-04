@@ -137,6 +137,7 @@ class Modal extends React.Component<IModalProps, IModalState> {
   };
 
   public componentDidUpdate() {
+    // console.log('Modal.tsx - componentDidUpdate()')
     if (this.lightbox) {
       const lightboxRect = this.lightbox.getBoundingClientRect();
       const offset = lightboxRect.top > 0 ? lightboxRect.top : 0;
@@ -148,6 +149,7 @@ class Modal extends React.Component<IModalProps, IModalState> {
   }
 
   public toggleModal = async () => {
+    // console.log('Modal.tsx - toggleModal')
     const d = typeof window !== "undefined" ? document : "";
     const body = d ? d.body || d.getElementsByTagName("body")[0] : "";
     if (body) {
@@ -161,6 +163,7 @@ class Modal extends React.Component<IModalProps, IModalState> {
   };
 
   public render() {
+    console.log('Modal.ts - ***** render() ******')
     const { offset } = this.state;
     const { children, show, opacity } = this.props;
     return (
